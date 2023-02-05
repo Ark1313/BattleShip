@@ -1,0 +1,267 @@
+from random import randrange as rnd
+from random import choice as rnc
+
+
+# проверим правильность введённых координат и что-бы корабль не вышел за пределы поля
+def proverka(x, y, vector, palubs, name):
+
+    if x == -1 or x == 0 or y == 0 or x > 6 or y > 6:
+        if name == "Игрок":
+            print("C координатами что-то не то, проверте пожалуйста и попробуйте ещё раз: ")
+        got = False
+    elif "xyху".find(str.lower(vector)) == - 1:
+        if name == "Игрок":
+            print("Есть только две оси:\n"
+                  "Х (на поле она обозначается буквами\n"
+                  "Y (на поле она обозначается цифрами\n"
+                  "Попробуйте ещё раз: ")
+        got = False
+    elif (x + palubs - 1 > 6 and "xх".find(str.lower(vector)) != - 1) \
+        or (y + palubs - 1 > 6 and "yу".find(str.lower(vector)) != - 1):
+        if name == "Игрок":
+            print("Судно не помещается, попробуйте его сдвинуть или сменить направление \n")
+        got = False
+    else:
+        got = True
+    return got
+
+
+class Ships:
+
+    """
+        Описание кораблей
+    """
+
+    def __init__(self, name, palubs):
+        self.name = name
+        self.palubs = int(palubs)
+        self.vvod_koordinat()
+
+    # метод для ввода координат
+    def vvod_koordinat(self):
+        _A_CONST = "АБВГДЕ"
+        gotovnost = False
+        while not gotovnost:
+            if self.name == "Игрок":
+                try:
+                    koor = str.strip(input(f"Введите координаты {self.palubs}-палубного корабля: "))
+                    self.y = int(koor[1])
+                    self.x = int(_A_CONST.find(str.upper(koor[0]))) + 1
+                    if self.palubs == 1:
+                        self.vector = "x"
+                    else:
+                        self.vector = str.lower(input("Вдоль какой оси Х или Y расположить его \n "
+                                                      "(вдоль оси X или Y)\n"))
+                except IndexError:
+                    print("Какой-то непорядок с координатами, попробуйте ещё раз.\n"
+                          "Я сейчас запущу проверку, что-бы уточнить в чём проблема...")
+                    self.x, self.y, self.vector = -1, 7, "х"
+                except ValueError:
+                    print("Какой-то непорядок с координатами, попробуйте ещё раз.\n"
+                          "Я сейчас запущу проверку, что-бы уточнить в чём проблема...")
+                    self.x, self.y, self.vector = -1, 7, "х"
+            else:
+                self.x, self.y, self.vector = rnd(1, 7), rnd(1, 7), rnc("xy")
+            gotovnost = proverka(self.x, self.y, self.vector, self.palubs, self.name)
+
+
+class Pole():
+    """
+            Работа с полем
+    """
+
+    def __init__(self, name):
+        _NABOR_PALUB = "3221111"
+        self.name = name
+        self.pole = {}
+        ship_cor = []
+        self.pole_korabl_moy = []
+        self.pole_korabl = []
+        pole_bufer = []
+        self.udar = []
+        self.pole_popal = []
+
+        i = 0
+        for paluba in _NABOR_PALUB:
+            gotovnost = False
+            loop = 0
+            while not gotovnost:
+                korabl = []
+                if self.name == "Игрок":
+                    self.vivod_polya("", "")
+                ship_cor.append(Ships(self.name, paluba))
+                for j in range(int(paluba)):  # проход по палубе
+                    if "xх".find(str.lower(ship_cor[i].vector)) != - 1:
+                        korabl.append(str(ship_cor[i].x + j) + str(ship_cor[i].y))
+                    else:
+                        korabl.append(str(ship_cor[i].x) + str(ship_cor[i].y + j))
+                if i != 0 and list(set(korabl) & set(pole_bufer)):
+                    if self.name == "Игрок":
+                        print("\nКапитан, существует риск столкновения с соседним кораблем!\n"
+                              "Необходимо отдалить судно на безопасное растояние.\n")
+                        self.vivod_polya("", "")
+                    ship_cor.pop()
+                    loop += 1
+                    if loop == 100000:
+                        print(f"Компьютер решил сдаться до начала боя!\n"
+                              "Победил Игрок!\n")
+                        exit()
+                    continue
+                else:
+                    self.pole_korabl_moy += korabl
+                    if "xх".find(str.lower(ship_cor[i].vector)) != - 1:
+                        pole_bufer += self.zan_mesta(ship_cor[i].x, ship_cor[i].y, ship_cor[i].palubs,
+                                                     ship_cor[i].vector)
+                    else:
+                        pole_bufer += self.zan_mesta(ship_cor[i].y, ship_cor[i].x, ship_cor[i].palubs,
+                                                     ship_cor[i].vector)
+                    gotovnost = True
+            i += 1
+
+        if self.name == "Игрок":
+            self.vivod_polya("", "")
+        else:
+            print("\n\n\n\nИгрок 2 готов к бою.\n")
+
+    # вывод своего поля на экран
+    def vivod_polya(self, udar, pole_popal):
+        print(f"{self.name}, ваше поле выглядит так:")
+        pole = {}
+        for i in range(int(7)):
+            for j in range(int(7)):
+                lo = str(j) + str(i)
+                if i == 0 and j == 0:
+                    pole[i, j] = " "
+                elif i == 0 and j != 0:
+                    pole[i, j] = chr(1039 + j)
+                elif i != 0 and j == 0:
+                    pole[i, j] = i
+                elif lo in self.pole_korabl_moy:
+                    pole[i, j] = chr(9972)
+                elif lo in pole_popal:
+                    pole[i, j] = chr(9855)
+                elif lo in udar:
+                    pole[i, j] = "X"
+                else:
+                    pole[i, j] = "0"
+            print(*[pole[i, j] for j in range(7)], sep="\t|")
+
+    # вывод поля противника на экран
+    def vivod_polya_prot(self, udar, pole_popal):
+        print(f"{self.name}, поле вашего противника выглядит так:")
+        pole = {}
+        for i in range(int(7)):
+            for j in range(int(7)):
+                lo = str(j) + str(i)
+                if i == 0 and j == 0:
+                    pole[i, j] = " "
+                elif i == 0 and j != 0:
+                    pole[i, j] = chr(1039 + j)
+                elif i != 0 and j == 0:
+                    pole[i, j] = i
+                elif lo in pole_popal:
+                    pole[i, j] = chr(9855)
+                elif lo in udar:
+                    pole[i, j] = "X"
+                else:
+                    pole[i, j] = "0"
+            print(*[pole[i, j] for j in range(7)], sep="\t|")
+
+    # вспомогательный метод для zan_mesta
+    @classmethod
+    def zan1(cls, a, b):
+        if a - 1 >= 1:
+            i1 = a - 1
+        else:
+            i1 = a
+        if a + b <= 6:
+            i2 = a + b
+        else:
+            i2 = a + b - 1
+        return i1, i2
+
+    # буфер вокруг корабля (x, y , палуба, вектор)
+    def zan_mesta(self, a, b, c, v):
+        mesto_bufer = []
+        i1, i2 = self.zan1(a, c)
+        j1, j2 = self.zan1(b, 1)
+
+        for i in range(i1, i2 + 1):
+            for j in range(j1, j2 + 1):
+                if "xх".find(str.lower(v)) != - 1:
+                    mesto_bufer.append(str(i) + str(j))
+                else:
+                    mesto_bufer.append(str(j) + str(i))
+        return mesto_bufer
+
+# передача координат корабля
+    def peredacha(self, koor_kor):
+        self.pole_korabl = koor_kor
+
+# метод обрабатывающий выстрел
+    def vistrel(self):
+        _A_CONST = "АБВГДЕ"
+        popadanie = True
+
+        while popadanie:
+            prover = False
+            while not prover:
+                if self.name == "Игрок":
+                    try:
+                        koor = str.strip(input(f"Введите координаты выстрела"))
+                        self.vy = int(koor[1])
+                        self.vx = int(_A_CONST.find(str.upper(koor[0]))) + 1
+                    except IndexError:
+                        print("Какой-то непорядок с координатами, попробуйте ещё раз.\n"
+                              "Я сейчас запущу проверку, что-бы уточнить в чём проблема...")
+                        self.vx, self.vy = 7, 7
+                    except ValueError:
+                        print("Какой-то непорядок с координатами, попробуйте ещё раз.\n"
+                              "Я сейчас запущу проверку, что-бы уточнить в чём проблема...")
+                        self.vx, self.vy = 7, 7
+                else:
+                    self.vx, self.vy = rnd(1, 7), rnd(1, 7)
+                    print(f"{self.name}  делает выстрел {self.vx}{self.vy}")
+                prover = proverka(self.vx, self.vy, "x", 0, self.name)
+            zalp = str(self.vx) + str(self.vy)
+            if str(zalp) in self.udar or str(zalp) in self.pole_popal:
+                print(f"Вы уже стреляли в эту точку\n"
+                      f"Выберите другую координату для выстрела")
+                popadanie = False
+                continue
+            elif str(zalp) in self.pole_korabl:
+                self.pole_korabl.remove(str(zalp))
+                self.pole_popal.append(zalp)
+                print("Есть попадание!")
+                popadanie = True
+            else:
+                print("Мимо")
+                self.udar.append(zalp)
+                popadanie = False
+
+    def getpole_korabl(self):
+        return self.pole_korabl_moy
+
+
+# тело программы
+
+
+player2 = Pole("Компьютер")
+player1 = Pole("Игрок")
+
+player1.peredacha(player2.getpole_korabl())
+player2.peredacha(player1.getpole_korabl())
+
+player1.vivod_polya(player2.udar, player2.pole_popal)
+
+print("Корабли расставлены\n"
+      "Игроки готовы к бою\n")
+
+while player1.getpole_korabl() or player2.getpole_korabl():
+    player1.vistrel()
+    player1.vivod_polya(player2.udar, player2.pole_popal)
+    player1.vivod_polya_prot(player1.udar, player1.pole_popal)
+if not player1.getpole_korabl():
+    print(f"Победу одержал {player1.name}")
+else:
+    print(f"Победу одержал {player2.name}")
